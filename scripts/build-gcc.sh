@@ -10,11 +10,11 @@
 set -euo pipefail
 
 GCC_VERSION="16.2.0"
-# Hard requirement: build every front-end present in the source tree.
-# Known rough edges on Darwin: ada needs a pre-existing GNAT (absent),
-# go (gccgo) is largely unmaintained. If either breaks the build, see
-# README.md -> "Falling back to a reduced language set".
-LANGUAGES="all"
+# First run: a reduced but stable set to prove the whole bootstrap,
+# packaging and artifact pipeline on the Intel runner. ada needs a
+# pre-existing GNAT (absent on runners) and gccgo is largely unmaintained;
+# both are deferred. See README.md -> "Language set".
+LANGUAGES="c,c++,fortran,objc,obj-c++,jit"
 
 WORKSPACE="${GITHUB_WORKSPACE:-$HOME}"
 PREFIX="$WORKSPACE/gcc-install"

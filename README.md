@@ -22,7 +22,7 @@ gcc-actions/
 |---|---|
 | Runner | `macos-26-intel`（**x64**；`macos-26` 是 arm64，架构不匹配，不能用） |
 | GCC 版本 | 16.2.0 |
-| 语言 | `all`（硬上全语言；风险见下） |
+| 语言 | `c,c++,fortran,objc,obj-c++,jit`（首轮裁剪集合；ada/go 暂缓，见第五节） |
 | NLS | `--enable-nls --with-libintl-prefix=<gettext>` |
 | 前置库 | gmp 6.3.0 / mpfr 4.2.2 / mpc 1.3.1 / isl 0.24，**源码内嵌**编译，静态进 GCC，不依赖 Homebrew dylib |
 | libintl | 来自 runner 的 Homebrew gettext；运行时依赖 guest 已装的 MacPorts gettext |
@@ -56,8 +56,8 @@ git push -u origin main
 3. **Run workflow** → 选 `main` → 运行。
 4. 工作流为手动触发，不会在 push 时自动跑。
 
-> 标准 Intel runner 只有 3 核，全语言 bootstrap 可能接近 job 的 6 小时上限；
-> 工作流已设 `timeout-minutes: 330`。若超时，先按下文回退语言集合再跑。
+> 标准 Intel runner 只有 3 核，bootstrap 可能接近 job 的 6 小时上限；
+> 工作流已设 `timeout-minutes: 330`。若超时，先核对日志阶段再重跑。
 
 ## 三、取回产物
 
@@ -118,31 +118,27 @@ install_name_tool -change \
 
 前置 gmp/mpfr/mpc/isl 已内嵌静态链接，不存在这条路径问题。
 
-## 五、语言风险与回退
+## 五、语言集合
 
-`--enable-languages=all` 在 Darwin 上有两个已知难点：
-
-- **Ada**：需要宿主已存在 GNAT 引导编译器，runner 没有，configure/bootstrap 可能失败。
-- **Go (gccgo)**：前端长期失修，Darwin 上很可能编不过。
-- 源码树内没有 brig 前端；`algol68` 为 16 新增前端，成熟度未知。
-
-若构建在 ada/go 阶段失败，把 `scripts/build-gcc.sh` 里：
-
-```sh
-LANGUAGES="all"
-```
-
-改为可在 Darwin 稳定构建的集合：
+首轮采用 Darwin 上可稳定构建的裁剪集合：
 
 ```sh
 LANGUAGES="c,c++,fortran,objc,obj-c++,jit"
 ```
 
-提交后重新触发工作流即可。
+以下前端暂缓，未纳入首轮：
+
+- **Ada**：GCC 自举需要宿主已存在 GNAT 引导编译器，runner 上没有，configure/bootstrap 会失败。
+- **Go (gccgo)**：前端长期失修，Darwin 上很可能编不过。
+- `algol68` 为 16 新增前端，成熟度未知；源码树内没有 brig 前端。
+
+链路跑通、产物能装进 guest 验证可用后，若要补前端，把
+`scripts/build-gcc.sh` 里的 `LANGUAGES` 改成目标集合（或 `all`），
+提交后重新触发工作流。
 
 ## 六、已知限制
 
 - 产物面向 `x86_64-apple-darwin26`，与本机 Intel guest 同大版本；不要装到 arm64 Mac。
 - CI 不交叉编译：runner 是真 macOS，GCC 在其中原生自举，产物可直接在 guest 运行。
-- 私有仓库消耗 Actions 分钟数；标准档分钟数有限，全语言 bootstrap 属重任务。
+- 仓库为 public：标准 GitHub-hosted runner 的 job 分钟数免费；artifact 存储单独计量（本任务产物仅一个 tar.gz，量很小）。
 - 若 Homebrew 在该 runner 上缺某个 bottle，会退回本地编译，进一步拉长构建时间。
