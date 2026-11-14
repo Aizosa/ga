@@ -110,6 +110,9 @@ SDK_PATH="$(xcrun --show-sdk-path)"
 export SDKROOT="$SDK_PATH"
 echo "sdk=$SDK_PATH"
 
+# libsanitizer's sanitizer_mac.cpp pulls in the XNU SDK mach headers, whose
+# xnu_static_assert_struct_size macros GCC cannot parse; skip the sanitizer
+# runtimes (ASan/UBSan/TSan) -- they are not needed for ordinary builds.
 ../configure \
   --prefix="$PREFIX" \
   --with-sysroot="$SDK_PATH" \
@@ -120,6 +123,7 @@ echo "sdk=$SDK_PATH"
   --with-system-zlib \
   --disable-multilib \
   --disable-lto \
+  --disable-libsanitizer \
   --enable-checking=release \
   --program-suffix=-16 \
   CPPFLAGS="-I$GETTEXT_PREFIX/include" \

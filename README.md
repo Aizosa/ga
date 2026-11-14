@@ -26,6 +26,7 @@ gcc-actions/
 | 语言 | `c,c++,fortran,objc,obj-c++`（裁剪集合；ada/go/jit 暂缓，见第五节） |
 | NLS | `--enable-nls --with-libintl-prefix=<gettext>` |
 | 自举 | `--disable-bootstrap`：单次编译，跳过 stage2/3 自举一致性校验；产物功能完整，但不做自举比对 |
+| Sanitizer | `--disable-libsanitizer`：不编 ASan/UBSan/TSan 运行时；其 `sanitizer_mac.cpp` 解析不了 XNU SDK 静态断言宏。日常编译用不到，产物不能用 `-fsanitize=address` 等 |
 | Sysroot | `--with-sysroot=$(xcrun --show-sdk-path)`（Xcode 11+ 无 `/usr/include`，必须显式绑定 SDK，否则 fixinc 失败） |
 | 前置库 | gmp 6.3.0 / mpfr 4.2.2 / mpc 1.3.1 / isl 0.24，**源码内嵌**编译，静态进 GCC，不依赖 Homebrew dylib |
 | libintl | 来自 runner 的 Homebrew gettext；运行时依赖 guest 已装的 MacPorts gettext |
@@ -144,5 +145,6 @@ LANGUAGES="c,c++,fortran,objc,obj-c++"
 
 - 产物面向 `x86_64-apple-darwin26`，与本机 Intel guest 同大版本；不要装到 arm64 Mac。
 - CI 不交叉编译：runner 是真 macOS，GCC 在其中原生单次编译（非三阶段自举），产物可直接在 guest 运行。
+- 未含 libsanitizer：产物不带 ASan/UBSan/TSan 运行时，`-fsanitize=address` 等不可用；其余常规编译、链接不受影响。
 - 仓库为 public：标准 GitHub-hosted runner 的 job 分钟数免费；artifact 存储单独计量（本任务产物仅一个 tar.gz，量很小）。
 - 若 Homebrew 在该 runner 上缺某个 bottle，会退回本地编译，进一步拉长构建时间。
