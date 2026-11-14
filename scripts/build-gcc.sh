@@ -13,8 +13,10 @@ GCC_VERSION="16.2.0"
 # First run: a reduced but stable set to prove the whole build, packaging
 # and artifact pipeline on the Intel runner. ada needs a
 # pre-existing GNAT (absent on runners) and gccgo is largely unmaintained;
-# both are deferred. See README.md -> "Language set".
-LANGUAGES="c,c++,fortran,objc,obj-c++,jit"
+# both are deferred. jit is deferred too: on macOS the GCC safe-ctype.h macros
+# clash with the SDK libc++ headers pulled in by the JIT C++ sources (upstream
+# PR 111632). See README.md -> "Language set".
+LANGUAGES="c,c++,fortran,objc,obj-c++"
 
 WORKSPACE="${GITHUB_WORKSPACE:-$HOME}"
 PREFIX="$WORKSPACE/gcc-install"
@@ -119,7 +121,6 @@ echo "sdk=$SDK_PATH"
   --disable-multilib \
   --disable-lto \
   --enable-checking=release \
-  --enable-host-shared \
   --program-suffix=-16 \
   CPPFLAGS="-I$GETTEXT_PREFIX/include" \
   LDFLAGS="-L$GETTEXT_PREFIX/lib"

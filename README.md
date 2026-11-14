@@ -23,7 +23,7 @@ gcc-actions/
 |---|---|
 | Runner | `macos-26-intel`（**x64**；`macos-26` 是 arm64，架构不匹配，不能用） |
 | GCC 版本 | 16.2.0 |
-| 语言 | `c,c++,fortran,objc,obj-c++,jit`（首轮裁剪集合；ada/go 暂缓，见第五节） |
+| 语言 | `c,c++,fortran,objc,obj-c++`（裁剪集合；ada/go/jit 暂缓，见第五节） |
 | NLS | `--enable-nls --with-libintl-prefix=<gettext>` |
 | 自举 | `--disable-bootstrap`：单次编译，跳过 stage2/3 自举一致性校验；产物功能完整，但不做自举比对 |
 | Sysroot | `--with-sysroot=$(xcrun --show-sdk-path)`（Xcode 11+ 无 `/usr/include`，必须显式绑定 SDK，否则 fixinc 失败） |
@@ -126,13 +126,14 @@ install_name_tool -change \
 首轮采用 Darwin 上可稳定构建的裁剪集合：
 
 ```sh
-LANGUAGES="c,c++,fortran,objc,obj-c++,jit"
+LANGUAGES="c,c++,fortran,objc,obj-c++"
 ```
 
 以下前端暂缓，未纳入首轮：
 
 - **Ada**：GCC 编译需要宿主已存在 GNAT 引导编译器，runner 上没有，configure/编译会失败。
 - **Go (gccgo)**：前端长期失修，Darwin 上很可能编不过。
+- **JIT (libgccjit)**：JIT 的 C++ 源文件引入 SDK libc++ 头，与 GCC 自身 `safe-ctype.h` 的 `isprint/iscntrl/...` 宏冲突，编译报错（上游 [111632](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=111632)）。日常编译用不到内嵌 JIT，先不纳入。
 - `algol68` 为 16 新增前端，成熟度未知；源码树内没有 brig 前端。
 
 链路跑通、产物能装进 guest 验证可用后，若要补前端，把
