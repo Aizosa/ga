@@ -24,6 +24,7 @@ gcc-actions/
 | GCC 版本 | 16.2.0 |
 | 语言 | `c,c++,fortran,objc,obj-c++,jit`（首轮裁剪集合；ada/go 暂缓，见第五节） |
 | NLS | `--enable-nls --with-libintl-prefix=<gettext>` |
+| Sysroot | `--with-sysroot=$(xcrun --show-sdk-path)`（Xcode 11+ 无 `/usr/include`，必须显式绑定 SDK，否则 fixinc 失败） |
 | 前置库 | gmp 6.3.0 / mpfr 4.2.2 / mpc 1.3.1 / isl 0.24，**源码内嵌**编译，静态进 GCC，不依赖 Homebrew dylib |
 | libintl | 来自 runner 的 Homebrew gettext；运行时依赖 guest 已装的 MacPorts gettext |
 | 安装前缀（产物内） | 解压后对应 `~/opt/gcc-16.2.0` |

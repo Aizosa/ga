@@ -101,8 +101,16 @@ rm -rf "$BUILD"
 mkdir -p "$BUILD"
 cd "$BUILD"
 
+# Xcode 11+ ships no /usr/include; headers live in the SDK. A native GCC
+# bootstrap on Darwin must be pointed at the SDK explicitly, otherwise
+# fixinc probes the nonexistent /usr/include and fails (GCC bug 90834).
+SDK_PATH="$(xcrun --show-sdk-path)"
+export SDKROOT="$SDK_PATH"
+echo "sdk=$SDK_PATH"
+
 ../configure \
   --prefix="$PREFIX" \
+  --with-sysroot="$SDK_PATH" \
   --enable-languages="$LANGUAGES" \
   --enable-nls \
   --with-libintl-prefix="$GETTEXT_PREFIX" \
