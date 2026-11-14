@@ -1,13 +1,13 @@
 name: Build GCC 16.2.0 (x86_64, NLS)
 
-# Manual trigger only: a full GCC bootstrap is long and memory-heavy,
+# Manual trigger only: a GCC build is memory-heavy,
 # we do not want it to run on every push.
 on:
   workflow_dispatch:
 
 jobs:
   build-gcc:
-    name: Bootstrap GCC on macOS 26 Intel
+    name: Build GCC on macOS 26 Intel
     # x86_64 runner to match the Intel macOS guest in this project.
     # macos-26 is arm64; do not switch to it.
     runs-on: macos-26-intel

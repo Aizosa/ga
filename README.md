@@ -1,18 +1,19 @@
 # 在 GitHub Actions 上编译带 NLS 的 GNU GCC 16.2.0
 
-目标：在 **x86_64** 的 macOS 26 runner 上原生 bootstrap 一个
-`--enable-nls` 的 GNU GCC 16.2.0，打包成可部署到本机 Intel macOS 虚拟机
+目标：在 **x86_64** 的 macOS 26 runner 上原生单次编译
+（`--disable-bootstrap`，不做三阶段自举）一个 `--enable-nls` 的 GNU GCC
+16.2.0，打包成可部署到本机 Intel macOS 虚拟机
 （guest：`x86_64-apple-darwin25.6.0` / macOS 26.7.3）的产物。
 
-> 为什么不用本地 VM 编译：guest 只有 6G 内存，bootstrap 全语言峰值高、
-> 曾触发宿主 OOM。GitHub 的 macOS Intel runner 有 14G 内存，编译不占本机资源。
+> 为什么不用本地 VM 编译：guest 只有 6G 内存，全语言峰值高、曾触发宿主
+> OOM；三阶段自举在 3 核 runner 上又会超过 job 时限，故 CI 改用单次编译。
 
 ## 目录结构
 
 ```
 gcc-actions/
 ├── .github/workflows/build-gcc.yml   # Actions 工作流（手动触发）
-├── scripts/build-gcc.sh              # 下载 / 前置库 / configure / bootstrap / 打包
+├── scripts/build-gcc.sh              # 下载 / 前置库 / configure / 单次编译 / 打包
 └── README.md
 ```
 
@@ -24,6 +25,7 @@ gcc-actions/
 | GCC 版本 | 16.2.0 |
 | 语言 | `c,c++,fortran,objc,obj-c++,jit`（首轮裁剪集合；ada/go 暂缓，见第五节） |
 | NLS | `--enable-nls --with-libintl-prefix=<gettext>` |
+| 自举 | `--disable-bootstrap`：单次编译，跳过 stage2/3 自举一致性校验；产物功能完整，但不做自举比对 |
 | Sysroot | `--with-sysroot=$(xcrun --show-sdk-path)`（Xcode 11+ 无 `/usr/include`，必须显式绑定 SDK，否则 fixinc 失败） |
 | 前置库 | gmp 6.3.0 / mpfr 4.2.2 / mpc 1.3.1 / isl 0.24，**源码内嵌**编译，静态进 GCC，不依赖 Homebrew dylib |
 | libintl | 来自 runner 的 Homebrew gettext；运行时依赖 guest 已装的 MacPorts gettext |
@@ -57,8 +59,8 @@ git push -u origin main
 3. **Run workflow** → 选 `main` → 运行。
 4. 工作流为手动触发，不会在 push 时自动跑。
 
-> 标准 Intel runner 只有 3 核，bootstrap 可能接近 job 的 6 小时上限；
-> 工作流已设 `timeout-minutes: 330`。若超时，先核对日志阶段再重跑。
+> 标准 Intel runner 只有 3 核；已用 `--disable-bootstrap` 跳过三阶段自举以控制时长。
+> 工作流设 `timeout-minutes: 330`（GitHub job 硬上限 6h），若超时先核对日志阶段再重跑。
 
 ## 三、取回产物
 
@@ -129,7 +131,7 @@ LANGUAGES="c,c++,fortran,objc,obj-c++,jit"
 
 以下前端暂缓，未纳入首轮：
 
-- **Ada**：GCC 自举需要宿主已存在 GNAT 引导编译器，runner 上没有，configure/bootstrap 会失败。
+- **Ada**：GCC 编译需要宿主已存在 GNAT 引导编译器，runner 上没有，configure/编译会失败。
 - **Go (gccgo)**：前端长期失修，Darwin 上很可能编不过。
 - `algol68` 为 16 新增前端，成熟度未知；源码树内没有 brig 前端。
 
@@ -140,6 +142,6 @@ LANGUAGES="c,c++,fortran,objc,obj-c++,jit"
 ## 六、已知限制
 
 - 产物面向 `x86_64-apple-darwin26`，与本机 Intel guest 同大版本；不要装到 arm64 Mac。
-- CI 不交叉编译：runner 是真 macOS，GCC 在其中原生自举，产物可直接在 guest 运行。
+- CI 不交叉编译：runner 是真 macOS，GCC 在其中原生单次编译（非三阶段自举），产物可直接在 guest 运行。
 - 仓库为 public：标准 GitHub-hosted runner 的 job 分钟数免费；artifact 存储单独计量（本任务产物仅一个 tar.gz，量很小）。
 - 若 Homebrew 在该 runner 上缺某个 bottle，会退回本地编译，进一步拉长构建时间。

@@ -10,8 +10,8 @@
 set -euo pipefail
 
 GCC_VERSION="16.2.0"
-# First run: a reduced but stable set to prove the whole bootstrap,
-# packaging and artifact pipeline on the Intel runner. ada needs a
+# First run: a reduced but stable set to prove the whole build, packaging
+# and artifact pipeline on the Intel runner. ada needs a
 # pre-existing GNAT (absent on runners) and gccgo is largely unmaintained;
 # both are deferred. See README.md -> "Language set".
 LANGUAGES="c,c++,fortran,objc,obj-c++,jit"
@@ -102,7 +102,7 @@ mkdir -p "$BUILD"
 cd "$BUILD"
 
 # Xcode 11+ ships no /usr/include; headers live in the SDK. A native GCC
-# bootstrap on Darwin must be pointed at the SDK explicitly, otherwise
+# build on Darwin must be pointed at the SDK explicitly, otherwise
 # fixinc probes the nonexistent /usr/include and fails (GCC bug 90834).
 SDK_PATH="$(xcrun --show-sdk-path)"
 export SDKROOT="$SDK_PATH"
@@ -113,6 +113,7 @@ echo "sdk=$SDK_PATH"
   --with-sysroot="$SDK_PATH" \
   --enable-languages="$LANGUAGES" \
   --enable-nls \
+  --disable-bootstrap \
   --with-libintl-prefix="$GETTEXT_PREFIX" \
   --with-system-zlib \
   --disable-multilib \
@@ -127,8 +128,12 @@ echo "sdk=$SDK_PATH"
 grep -E "^ENABLE_NLS|^HAVE_LIBINTL" Makefile || true
 
 # ---------------------------------------------------------------------------
-log "Bootstrap (gmake -j$(sysctl -n hw.ncpu))"
-gmake -j"$(sysctl -n hw.ncpu)" bootstrap
+# --disable-bootstrap: single-stage build with the host clang, no stage2/3
+# self-hosting cycle. The product skips the bootstrap consistency check but
+# is a complete, working GCC; this keeps the slow 3-core runner inside the
+# job time limit.
+log "Build (gmake -j$(sysctl -n hw.ncpu)), no bootstrap"
+gmake -j"$(sysctl -n hw.ncpu)"
 
 # ---------------------------------------------------------------------------
 log "Install into prefix"
