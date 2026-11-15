@@ -170,7 +170,10 @@ echo "--- NLS message catalogs installed ---"
 find "$PREFIX" -name '*.mo' | tee "$WORKSPACE/nls-mo.txt"
 
 echo "--- front ends installed ---"
-ls "$BINDIR" | grep -E '-(16)$' | sort | tee "$WORKSPACE/frontends.txt"
+# BSD grep (macOS) treats a pattern starting with '-' as an option; use -e
+# to pass it explicitly. Guard with || true so an empty match cannot abort the
+# script under set -euo pipefail.
+{ ls "$BINDIR" | grep -E -e '-16$' || true; } | sort | tee "$WORKSPACE/frontends.txt"
 
 # ---------------------------------------------------------------------------
 log "Package bundle"
